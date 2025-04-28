@@ -1,0 +1,36 @@
+{
+  "name": "@misiak-workspace/hello-world",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "serve": {
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@misiak-workspace/hello-world:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@misiak-workspace/hello-world:build:development"
+          },
+          "production": {
+            "buildTarget": "@misiak-workspace/hello-world:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}

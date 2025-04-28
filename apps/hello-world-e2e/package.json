@@ -1,0 +1,25 @@
+{
+  "name": "@misiak-workspace/hello-world-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@misiak-workspace/hello-world"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "apps/hello-world-e2e/jest.config.ts",
+          "passWithNoTests": true
+        },
+        "dependsOn": [
+          "@misiak-workspace/hello-world:build"
+        ]
+      }
+    }
+  }
+}
