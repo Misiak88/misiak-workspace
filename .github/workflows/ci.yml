@@ -3,9 +3,9 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
             BASE_REF="${{ github.event.pull_request.base.ref }}"
             HEAD_REF="${{ github.event.pull_request.head.ref }}"
           else
-            BASE_REF="main"
+            BASE_REF="master"
             HEAD_REF="HEAD"
           fi
           echo "BASE=$BASE_REF" >> $GITHUB_ENV
@@ -57,7 +57,7 @@ jobs:
 
   publish:
     needs: build
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
