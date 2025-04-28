@@ -2,6 +2,7 @@ name: CI
 
 # uruchamiaj workflow zarówno na push do `main`, jak i na każde PR do `main`
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
