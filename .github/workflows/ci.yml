@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [ master ]
+  workflow_dispatch:
   push:
+    branches: [ master ]
+  pull_request:
     branches: [ master ]
 
 permissions:
@@ -11,42 +12,77 @@ permissions:
   packages: write
 
 jobs:
-  # 1) zawsze: build/testy – na PR i na push
   build:
     runs-on: ubuntu-latest
     steps:
+      # 1) Pobierz cały kod i historię
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      # 2) Ustawiamy BASE i HEAD na podstawie eventu (PR vs push)
+      - name: Determine NX base & head
+        id: nx-vars
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            HEAD_REF="${{ github.event.pull_request.head.ref }}"
+          else
+            BASE_REF="master"
+            HEAD_REF="HEAD"
+          fi
+          echo "BASE=$BASE_REF" >> $GITHUB_ENV
+          echo "HEAD=$HEAD_REF" >> $GITHUB_ENV
+
+      # 3) Fetch gałęzi BASE, żeby git diff zadziałał
+      - name: Fetch base branch
+        run: git fetch origin $BASE:$BASE
+
+      # 4) Node.js + Yarn
+      - name: Setup Node.js & Yarn
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: yarn
 
+      # 5) Instalacja zależności
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # tu wstaw to, co potrzebujesz – lint, testy, nx build, itd.
-      - name: Build application
-        run: yarn nx build hello-world
+      # 6) Lint, testy i build tylko na zmianach
+      - name: Run lint, tests & build affected
+        run: |
+          yarn nx affected \
+            --base=$BASE \
+            --head=$HEAD \
+            --target=lint,test,build \
+            --parallel
 
-  # 2) tylko przy push do master: buduj & pushuj Docker
-  docker:
+  publish:
     needs: build
-    if: ${{ github.event_name == 'push' }}
+    # tylko przy pushu do master
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
+      # Checkout + historia potrzebna do ewentualnych kroków post-build
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      # Node.js + Yarn
+      - name: Setup Node.js & Yarn
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: yarn
 
+      # (opcjonalnie ponowna instalacja, jeśli build job nie cache’ował artefaktów)
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      # Logowanie do GHCR
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
@@ -54,11 +90,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build and push Docker image
+      # Build & push obrazu
+      - name: Build & push Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
           file: apps/hello-world/Dockerfile
+          platforms: linux/arm64,linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/hello-world:latest
+            ghcr.io/${{ github.repository_owner }}/hello-world:${{ github.sha }}
+
+      # Weryfikacja w logach, że obraz trafił na GHCR
+      - name: Verify GHCR image is available
+        run: |
+          echo "Tarki obrazu w GHCR:"
+          curl -s \
+            -H "Authorization: Bearer ${{ secrets.GHCR_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/static-site/versions \
+            | jq '.[].metadata.container.tags'
