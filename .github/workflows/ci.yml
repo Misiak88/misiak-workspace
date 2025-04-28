@@ -49,7 +49,7 @@ jobs:
             --head=$HEAD \
             --target=lint,test,build \
             --parallel
-
+            
   publish:
     needs: build
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
