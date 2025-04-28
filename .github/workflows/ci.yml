@@ -15,42 +15,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1) Pobierz cały kod i historię
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2) Ustawiamy BASE i HEAD na podstawie eventu (PR vs push)
-      - name: Determine NX base & head
+      - name: Determine NX base branch
         id: nx-vars
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_REF="${{ github.event.pull_request.base.ref }}"
-            HEAD_REF="${{ github.event.pull_request.head.ref }}"
           else
             BASE_REF="master"
-            HEAD_REF="HEAD"
           fi
-          echo "BASE=$BASE_REF" >> $GITHUB_ENV
-          echo "HEAD=$HEAD_REF" >> $GITHUB_ENV
+          echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
+          echo "BASE=origin/$BASE_REF" >> $GITHUB_ENV
+          echo "HEAD=HEAD" >> $GITHUB_ENV
 
-      # 3) Fetch gałęzi BASE, żeby git diff zadziałał
       - name: Fetch base branch
-        run: git fetch origin $BASE:$BASE
+        run: git fetch origin $BASE_REF
 
-      # 4) Node.js + Yarn
       - name: Setup Node.js & Yarn
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
 
-      # 5) Instalacja zależności
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # 6) Lint, testy i build tylko na zmianach
       - name: Run lint, tests & build affected
         run: |
           yarn nx affected \
@@ -61,28 +54,23 @@ jobs:
 
   publish:
     needs: build
-    # tylko przy pushu do master
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
-      # Checkout + historia potrzebna do ewentualnych kroków post-build
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Node.js + Yarn
       - name: Setup Node.js & Yarn
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
 
-      # (opcjonalnie ponowna instalacja, jeśli build job nie cache’ował artefaktów)
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # Logowanie do GHCR
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
@@ -90,7 +78,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # Build & push obrazu
       - name: Build & push Docker image
         uses: docker/build-push-action@v3
         with:
@@ -102,10 +89,9 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/hello-world:latest
             ghcr.io/${{ github.repository_owner }}/hello-world:${{ github.sha }}
 
-      # Weryfikacja w logach, że obraz trafił na GHCR
       - name: Verify GHCR image is available
         run: |
-          echo "Tarki obrazu w GHCR:"
+          echo "Tagi obrazu w GHCR:"
           curl -s \
             -H "Authorization: Bearer ${{ secrets.GHCR_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
