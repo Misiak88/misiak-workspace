@@ -4,18 +4,19 @@
  */
 
 import express from 'express';
-import * as path from 'path';
+import { join } from 'path';
 
 const app = express();
-
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
-
-app.get('/api', (req, res) => {
-  res.send({ message: 'Welcome to hello-world!' });
-});
-
 const port = process.env.PORT || 3333;
-const server = app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}/api`);
+
+// serwujemy pliki z folderu `assets`
+app.use(express.static(join(__dirname, 'assets')));
+
+// dowolna ścieżka zwraca index.html (SPA-friendly)
+app.get('*', (_req, res) => {
+  res.sendFile(join(__dirname, 'assets', 'index.html'));
 });
-server.on('error', console.error);
+
+app.listen(port, () =>
+  console.log(`🔥 Serwer static-site działa: http://localhost:${port}`)
+);
