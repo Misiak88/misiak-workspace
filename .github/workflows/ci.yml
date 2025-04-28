@@ -32,12 +32,13 @@ jobs:
 
   # 2) tylko przy push do master: buduj & pushuj Docker
   docker:
-    needs: build
-    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercase owner
+        run: |
+          echo "OWNER_LOWER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -61,4 +62,4 @@ jobs:
           file: apps/hello-world/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/hello-world:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/hello-world:latest
