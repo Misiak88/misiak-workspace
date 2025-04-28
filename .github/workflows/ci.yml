@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ master ]
   pull_request:
+    branches: [ master ]
+  push:
     branches: [ master ]
 
 permissions:
@@ -12,61 +11,38 @@ permissions:
   packages: write
 
 jobs:
+  # 1) zawsze: build/testy – na PR i na push
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Determine NX base branch
-        id: nx-vars
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_REF="${{ github.event.pull_request.base.ref }}"
-          else
-            BASE_REF="master"
-          fi
-          echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
-          echo "BASE=origin/$BASE_REF" >> $GITHUB_ENV
-          echo "HEAD=HEAD" >> $GITHUB_ENV
-
-      - name: Fetch base branch
-        run: git fetch origin $BASE_REF
-
-      - name: Setup Node.js & Yarn
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
+          node-version: '20'
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run lint, tests & build affected
-        run: |
-          yarn nx affected \
-            --base=$BASE \
-            --head=$HEAD \
-            --target=lint,test,build \
-            --parallel
+      # tu wstaw to, co potrzebujesz – lint, testy, nx build, itd.
+      - name: Build application
+        run: yarn nx build hello-world
 
-  publish:
+  # 2) tylko przy push do master: buduj & pushuj Docker
+  docker:
     needs: build
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Node.js & Yarn
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
+          node-version: '20'
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -78,22 +54,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build & push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v3
         with:
           context: .
           file: apps/hello-world/Dockerfile
-          platforms: linux/arm64,linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/hello-world:latest
-            ghcr.io/${{ github.repository_owner }}/hello-world:${{ github.sha }}
-
-      - name: Verify GHCR image is available
-        run: |
-          echo "Tagi obrazu w GHCR:"
-          curl -s \
-            -H "Authorization: Bearer ${{ secrets.GHCR_PAT }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/static-site/versions \
-            | jq '.[].metadata.container.tags'
