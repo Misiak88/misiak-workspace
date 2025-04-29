@@ -31,5 +31,6 @@ jobs:
       project_name: hello-world
       workspace_path: apps/hello-world
       docker_image: ghcr.io/${{ github.repository_owner }}/hello-world
+      run_lint: false
     secrets:
       GHCR_PAT: ${{ secrets.GHCR_PAT }}

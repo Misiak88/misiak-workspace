@@ -19,6 +19,11 @@ on:
         description: 'Full GHCR image name (without tag)'
         required: true
         type: string
+      run_lint:
+        description: 'Whether to run the lint step'
+        required: false
+        type: boolean
+        default: true
     secrets:
       GHCR_PAT:
         description: 'Token to push to GHCR'
@@ -52,6 +57,10 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Lint ${{ inputs.project_name }}
+        if: ${{ inputs.run_lint }}
+        run: yarn nx run ${{ inputs.project_name }}:lint
 
       - name: Build ${{ inputs.project_name }}
         run: yarn nx run ${{ inputs.project_name }}:build
