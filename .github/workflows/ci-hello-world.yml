@@ -1,0 +1,34 @@
+#############################
+# Hello-World app           #
+#############################
+
+name: CI Hello-World
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'apps/hello-world/**'
+      - 'apps/hello-world-e2e/**'
+      - 'libs/**'
+      - '.github/workflows/ci-common.yml'
+      - '.github/workflows/ci-hello-world.yml'
+  push:
+    branches: [ master ]
+    paths:
+      - 'apps/hello-world/**'
+      - 'apps/hello-world-e2e/**'
+      - 'libs/**'
+      - '.github/workflows/ci-common.yml'
+      - '.github/workflows/ci-hello-world.yml'
+
+jobs:
+  call-common:
+    uses: ./.github/workflows/ci-common.yml
+    with:
+      project_name: hello-world
+      workspace_path: apps/hello-world
+      docker_image: ghcr.io/${{ github.repository_owner }}/hello-world
+    secrets:
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+

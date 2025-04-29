@@ -1,14 +1,28 @@
-name: CI
-
-on:
-  pull_request:
-    branches: [ master ]
-  push:
-    branches: [ master ]
+name: CI Common
 
 permissions:
   contents: read
   packages: write
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        description: 'NX project name (e.g. hello-world)'
+        required: true
+        type: string
+      workspace_path:
+        description: 'Path in repo to project folder (e.g. apps/hello-world)'
+        required: true
+        type: string
+      docker_image:
+        description: 'Full Docker image name without tag (e.g. ghcr.io/owner/hello-world)'
+        required: true
+        type: string
+    secrets:
+      GHCR_PAT:
+        description: 'GitHub Container Registry token for pushing image'
+        required: true
 
 jobs:
   build:
@@ -25,40 +39,25 @@ jobs:
         with:
           node-version: '20'
 
-      # Cache Yarn
-      - name: Cache Yarn
+      - name: Cache dependencies & NX
         uses: actions/cache@v3
         with:
-          path: ~/.cache/yarn
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          path: |
+            ~/.cache/yarn
+            node_modules
+            .nx/cache
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      # Cache node_modules (na podstawie yarn.lock, bo używasz Yarn)
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-modules-
-
-      # Cache NX local cache (bez NX Cloud)
-      - name: Cache NX
-        uses: actions/cache@v3
-        with:
-          path: .nx/cache
-          key: ${{ runner.os }}-nx-${{ hashFiles('**/nx.json') }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-nx-
+            ${{ runner.os }}-deps-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Lint, Test & Build affected projects
+      - name: Lint, Test & Build affected for ${{ inputs.project_name }}
         run: |
           yarn nx affected \
             --target=lint,test,build \
+            --projects=${{ inputs.project_name }} \
             --parallel \
             --base=origin/master \
             --head=HEAD
@@ -66,7 +65,7 @@ jobs:
   docker:
     name: 🐋 Build & Push Docker
     needs: build
-    if: github.event_name == 'push'   # tylko przy push na master (po merge)
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -95,8 +94,8 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: apps/hello-world/Dockerfile
+          file: ${{ inputs.workspace_path }}/Dockerfile
           push: true
           platforms: linux/arm64/v8,linux/amd64
           tags: |
-            ghcr.io/${{ env.OWNER_LOWER }}/hello-world:latest
+            ${{ inputs.docker_image }}:latest
