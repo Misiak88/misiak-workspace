@@ -14,7 +14,7 @@ on:
     paths:
       - 'apps/hello-world/**'
       - 'apps/hello-world-e2e/**'
-      - 'libs/**'
+      #- 'libs/**'
       - '.github/workflows/ci-common.yml'
       - '.github/workflows/ci-hello-world.yml'
   push:
@@ -22,7 +22,7 @@ on:
     paths:
       - 'apps/hello-world/**'
       - 'apps/hello-world-e2e/**'
-      - 'libs/**'
+     # - 'libs/**'
       - '.github/workflows/ci-common.yml'
       - '.github/workflows/ci-hello-world.yml'
 
