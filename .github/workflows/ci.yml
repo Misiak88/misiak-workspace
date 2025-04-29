@@ -11,8 +11,8 @@ permissions:
   packages: write
 
 jobs:
-  # 1) zawsze: build/testy – na PR i na push
   build:
+    name: 🛠 Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,18 +23,48 @@ jobs:
         with:
           node-version: '20'
 
+      # Cache Yarn
+      - name: Cache Yarn
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/yarn
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # Cache node_modules
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-
+
+      # Cache NX
+      - name: Cache NX
+        uses: actions/cache@v3
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/nx.json') }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nx-
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # tu wstaw to, co potrzebujesz – lint, testy, nx build, itd.
-      - name: Build application
-        run: yarn nx build hello-world
+      - name: Lint, Test & Build affected projects
+        run: |
+          yarn nx affected --target=lint,test,build --parallel --base=${{ github.event.before }} --head=${{ github.sha }}
 
-  # 2) tylko przy push do master: buduj & pushuj Docker
   docker:
+    name: 🐋 Build & Push Docker
+    needs: build
+    if: github.event_name == 'push'  # tylko przy push do master
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Compute lowercase owner
         run: |
