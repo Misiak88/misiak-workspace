@@ -29,7 +29,10 @@
           "watchDepsName": "watch-deps"
         }
       },
-      "exclude": ["libs/backend/maps3-nb-data-types/*"]
+      "exclude": [
+        "libs/backend/maps3-nb-data-types/*",
+        "libs/shared/api-nb-data-sync-dto/*"
+      ]
     },
     {
       "plugin": "@nx/webpack/plugin",
@@ -56,7 +59,10 @@
     },
     {
       "plugin": "@nx/js/typescript",
-      "include": ["libs/backend/maps3-nb-data-types/*"],
+      "include": [
+        "libs/backend/maps3-nb-data-types/*",
+        "libs/shared/api-nb-data-sync-dto/*"
+      ],
       "options": {
         "typecheck": {
           "targetName": "typecheck"

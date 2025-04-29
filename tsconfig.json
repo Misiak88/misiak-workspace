@@ -17,6 +17,9 @@
     },
     {
       "path": "./libs/backend/maps3-nb-data-types"
+    },
+    {
+      "path": "./libs/shared/api-nb-data-sync-dto"
     }
   ]
 }

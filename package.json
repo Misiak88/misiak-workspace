@@ -52,6 +52,7 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "libs/backend/*"
+    "libs/backend/*",
+    "libs/shared/*"
   ]
 }
