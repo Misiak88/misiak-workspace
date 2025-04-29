@@ -101,4 +101,4 @@ jobs:
           push: true
           platforms: linux/arm64/v8,linux/amd64
           tags: |
-            ${{ inputs.docker_image }}:latest
+            ghcr.io/${{ env.OWNER_LOWER }}/${{ inputs.project_name }}:latest
