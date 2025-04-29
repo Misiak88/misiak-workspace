@@ -12,16 +12,21 @@ on:
         required: true
         type: string
       workspace_path:
-        description: 'Path in repo to project folder (e.g. apps/hello-world)'
+        description: 'Path to the app folder (e.g. apps/hello-world)'
         required: true
         type: string
       docker_image:
-        description: 'Full Docker image name without tag (e.g. ghcr.io/owner/hello-world)'
+        description: 'Full GHCR image name (without tag)'
         required: true
         type: string
+      targets:
+        description: 'Comma-separated NX targets to run'
+        required: false
+        type: string
+        default: 'lint,test,build'
     secrets:
       GHCR_PAT:
-        description: 'GitHub Container Registry token for pushing image'
+        description: 'Token to push to GHCR'
         required: true
 
 jobs:
@@ -56,7 +61,7 @@ jobs:
       - name: Lint, Test & Build affected for ${{ inputs.project_name }}
         run: |
           yarn nx affected \
-            --target=lint,test,build \
+            --target=${{ inputs.targets }} \
             --projects=${{ inputs.project_name }} \
             --parallel \
             --base=origin/master \
