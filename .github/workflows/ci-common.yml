@@ -19,11 +19,6 @@ on:
         description: 'Full GHCR image name (without tag)'
         required: true
         type: string
-      targets:
-        description: 'Comma-separated NX targets to run'
-        required: false
-        type: string
-        default: 'lint,test,build'
     secrets:
       GHCR_PAT:
         description: 'Token to push to GHCR'
@@ -31,7 +26,7 @@ on:
 
 jobs:
   build:
-    name: 🛠 Build & Test
+    name: 🛠 Lint & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code (full history)
@@ -58,14 +53,11 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Lint, Test & Build affected for ${{ inputs.project_name }}
-        run: |
-          yarn nx affected \
-            --target=${{ inputs.targets }} \
-            --projects=${{ inputs.project_name }} \
-            --parallel \
-            --base=origin/master \
-            --head=HEAD
+      - name: Lint ${{ inputs.project_name }}
+        run: yarn nx run ${{ inputs.project_name }}:lint
+
+      - name: Build ${{ inputs.project_name }}
+        run: yarn nx run ${{ inputs.project_name }}:build
 
   docker:
     name: 🐋 Build & Push Docker
