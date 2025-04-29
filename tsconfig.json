@@ -8,6 +8,12 @@
     },
     {
       "path": "./apps/hello-world"
+    },
+    {
+      "path": "./apps/api-nb-data-sync-e2e"
+    },
+    {
+      "path": "./apps/api-nb-data-sync"
     }
   ]
 }
