@@ -15,8 +15,10 @@ jobs:
     name: 🛠 Build & Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout code (full history)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,21 +34,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      # Cache node_modules
+      # Cache node_modules (na podstawie yarn.lock, bo używasz Yarn)
       - name: Cache node_modules
         uses: actions/cache@v3
         with:
           path: node_modules
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-modules-
 
-      # Cache NX
+      # Cache NX local cache (bez NX Cloud)
       - name: Cache NX
         uses: actions/cache@v3
         with:
           path: .nx/cache
-          key: ${{ runner.os }}-nx-${{ hashFiles('**/nx.json') }}-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/nx.json') }}-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-nx-
 
@@ -55,12 +57,16 @@ jobs:
 
       - name: Lint, Test & Build affected projects
         run: |
-          yarn nx affected --target=lint,test,build --parallel --base=${{ github.event.before }} --head=${{ github.sha }}
+          yarn nx affected \
+            --target=lint,test,build \
+            --parallel \
+            --base=origin/master \
+            --head=HEAD
 
   docker:
     name: 🐋 Build & Push Docker
     needs: build
-    if: github.event_name == 'push'  # tylko przy push do master
+    if: github.event_name == 'push'   # tylko przy push na master (po merge)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
