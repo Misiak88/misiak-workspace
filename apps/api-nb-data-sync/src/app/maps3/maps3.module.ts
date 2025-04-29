@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { Maps3Controller } from './maps3.controller';
-import { Maps3Service } from './maps3.service';
+import { HttpModule } from '@nestjs/axios';
+import { MapsService } from './maps3.service';
+import { MapsController } from './maps3.controller';
 
 @Module({
-  controllers: [Maps3Controller],
-  providers: [Maps3Service],
+  imports: [HttpModule],
+  providers: [MapsService],
+  controllers: [MapsController],
 })
-export class Maps3Module {}
+export class MapsModule {}
