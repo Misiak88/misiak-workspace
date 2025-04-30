@@ -100,5 +100,7 @@ jobs:
           file: ${{ inputs.workspace_path }}/Dockerfile
           push: true
           platforms: linux/arm64/v8,linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             ghcr.io/${{ env.OWNER_LOWER }}/${{ inputs.project_name }}:latest
