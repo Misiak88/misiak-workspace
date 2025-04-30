@@ -4,7 +4,9 @@ WORKDIR /app
 
 # 1.1 Copy root manifests and install all dependencies (including devDependencies)
 COPY package.json yarn.lock nx.json tsconfig.json tsconfig.base.json eslint.config.mjs ./
-RUN yarn install --frozen-lockfile
+RUN yarn config set network-timeout 600000 \
+ && yarn config set network-concurrency 1 \
+ && yarn install --frozen-lockfile
 
 # 1.2 Copy required parts of app from monorepo
 COPY libs/backend/maps3-nb-data-types ./libs/backend/maps3-nb-data-types
