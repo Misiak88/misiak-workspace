@@ -8,6 +8,18 @@
     },
     {
       "path": "./apps/hello-world"
+    },
+    {
+      "path": "./apps/api-nb-data-sync-e2e"
+    },
+    {
+      "path": "./apps/api-nb-data-sync"
+    },
+    {
+      "path": "./libs/backend/maps3-nb-data-types"
+    },
+    {
+      "path": "./libs/shared/api-nb-data-sync-dto"
     }
   ]
 }

@@ -1,0 +1,40 @@
+#############################
+# api-nb-data-sync          #
+#############################
+
+name: CI api-nb-data-sync
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'apps/api-nb-data-sync/**/*'
+      - 'apps/api-nb-data-sync-e2e/**/*'
+      - '.github/workflows/ci-common.yml'
+      - '.github/workflows/ci-api-nb-data-sync.yml'
+      - 'libs/libs/backend/maps3-nb-data-types/**/*'
+      - 'libs/shared/api-nb-data-sync-dto/**/*'
+  push:
+    branches: [ master ]
+    paths:
+      - 'apps/api-nb-data-sync/**/*'
+      - 'apps/api-nb-data-sync-e2e/**/*'
+      - '.github/workflows/ci-common.yml'
+      - '.github/workflows/ci-api-nb-data-sync.yml'
+      - 'libs/libs/backend/maps3-nb-data-types/**/*'
+      - 'libs/shared/api-nb-data-sync-dto/**/*'
+
+jobs:
+  call-common:
+    uses: ./.github/workflows/ci-common.yml
+    with:
+      project_name: api-nb-data-sync
+      workspace_path: apps/api-nb-data-sync
+      docker_image: ghcr.io/${{ github.repository_owner }}/api-nb-data-sync
+      run_lint: false
+    secrets:
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
