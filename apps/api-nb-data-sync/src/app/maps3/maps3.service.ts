@@ -1,10 +1,10 @@
-// apps/api-nb-data-sync/src/app/maps/maps.service.ts
-import 'dotenv/config';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { MapsApiResponse } from '@misiak-workspace/maps3-nb-data-types';
 import { StationSummaryDto } from '@misiak-workspace/api-nb-data-sync-dto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class MapsService {
@@ -12,21 +12,30 @@ export class MapsService {
   private readonly queryParams: Record<string, string>;
 
   constructor(private readonly http: HttpService) {
-
-    const {
-      API_BASE_URL,
-      LOGINKEY,
-      CITY,
-      DETAILS,
-      BIKES,
-      FORMAT,
-    } = process.env;
+    const API_BASE_URL = process.env.API_BASE_URL;
+    const LOGINKEY = process.env.LOGINKEY;
+    const CITY = process.env.CITY;
+    const DETAILS = process.env.DETAILS;
+    const BIKES = process.env.BIKES;
+    const FORMAT = process.env.FORMAT;
 
     if (!API_BASE_URL) {
-      throw new Error('Missing API_BASE_URL in .env');
+      throw new InternalServerErrorException('Missing API_BASE_URL in .env');
     }
-    if (!LOGINKEY || !CITY || !DETAILS || !BIKES || !FORMAT) {
-      throw new Error('One of LOGINKEY, CITY, DETAILS, BIKES or FORMAT is missing in .env');
+    if (!LOGINKEY) {
+      throw new InternalServerErrorException('Missing LOGINKEY in .env');
+    }
+    if (!CITY) {
+      throw new InternalServerErrorException('Missing CITY in .env');
+    }
+    if (!DETAILS) {
+      throw new InternalServerErrorException('Missing DETAILS in .env');
+    }
+    if (!BIKES) {
+      throw new InternalServerErrorException('Missing BIKES in .env');
+    }
+    if (!FORMAT) {
+      throw new InternalServerErrorException('Missing FORMAT in .env');
     }
 
     this.baseUrl = API_BASE_URL;
@@ -49,26 +58,42 @@ export class MapsService {
 
   async getPlaces(): Promise<StationSummaryDto[]> {
     const root = await this.fetchRaw();
-    const map = new Map<number, StationSummaryDto>();
 
-    for (const country of root.countries) {
-      for (const city of country.cities) {
-        for (const place of city.places) {
-          if (!map.has(place.uid)) {
-            map.set(place.uid, {
-              domain: country.domain,
-              cityName: city.name,
-              uid: place.uid,
-              name: place.name,
-              number: place.number,
-              bikes: place.bikes,
-              bikesAvailableToRent: place.bikes_available_to_rent,
-            });
-          }
-        }
+    const stations = root.countries.flatMap(country =>
+      country.cities.flatMap(city =>
+        city.places.map(place => ({
+          domain: country.domain,
+          cityName: city.name,
+          uid: place.uid,
+          name: place.name,
+          number: place.number,
+          bikes: place.bikes,
+          bikesAvailableToRent: place.bikes_available_to_rent,
+          //bikesUID: place.uid || undefined,
+        })),
+      ),
+    );
+
+    const unique = Array.from(
+      new Map(stations.map(s => [s.uid, s])).values(),
+    );
+
+
+    const dtos = plainToInstance(StationSummaryDto, unique);
+
+
+    for (const dto of dtos) {
+      const errors = await validate(dto);
+      if (errors.length > 0) {
+
+        const constraints = errors
+          .flatMap(error => Object.values(error.constraints || {}))
+          .join(', ');
+
+        throw new BadRequestException(`Validation failed: ${constraints}`);
       }
     }
 
-    return Array.from(map.values());
+    return dtos;
   }
 }
