@@ -56,7 +56,7 @@ jobs:
             ${{ runner.os }}-deps-
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --network-timeout 1000000
 
       - name: Lint ${{ inputs.project_name }}
         if: ${{ inputs.run_lint }}
