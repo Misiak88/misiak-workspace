@@ -1,38 +1,42 @@
-import { IsNumber, IsString, IsOptional } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { Station, CityStations } from './station-summary.interface';
 
-export class StationSummaryDto {
+
+export class StationDto implements Station {
+  @IsNumber()
+  uid!: number;
+
   @IsString()
-  domain: string;
-
-  @IsString()
-  cityName: string;
+  name!: string;
 
   @IsNumber()
-  uid: number;
-
-  @IsString()
-  name: string;
+  number!: number;
 
   @IsNumber()
-  number: number;
+  bikes!: number;
 
   @IsNumber()
-  bikes: number;
-
-  @IsNumber()
-  bikesAvailableToRent: number;
+  bikesAvailableToRent!: number;
 
   @IsOptional()
   @IsNumber()
   bikesUID?: number;
+}
 
-  constructor() {
-    this.domain = '';
-    this.cityName = '';
-    this.uid = 0;
-    this.name = '';
-    this.number = 0;
-    this.bikes = 0;
-    this.bikesAvailableToRent = 0;
-  }
+export class StationSummaryDto implements CityStations {
+  @IsString()
+  domain!: string;
+
+  @IsString()
+  cityName!: string;
+
+  @ValidateNested({ each: true })
+  @Type(() => StationDto)
+  stations!: StationDto[];
 }
