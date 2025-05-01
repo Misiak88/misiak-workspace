@@ -10,5 +10,7 @@ export interface Station {
 export interface CityStations {
   domain: string;
   cityName: string;
+  bikesAvailableToRentInSystem: number;
+  bikesAvailableToRentInSystemOnlyStations: number;
   stations: Station[];
 }

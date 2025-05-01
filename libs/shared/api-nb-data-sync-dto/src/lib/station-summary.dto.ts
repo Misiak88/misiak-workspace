@@ -36,6 +36,12 @@ export class StationSummaryDto implements CityStations {
   @IsString()
   cityName!: string;
 
+  @IsNumber()
+  bikesAvailableToRentInSystem!: number;
+
+  @IsNumber()
+  bikesAvailableToRentInSystemOnlyStations!: number;
+
   @ValidateNested({ each: true })
   @Type(() => StationDto)
   stations!: StationDto[];
