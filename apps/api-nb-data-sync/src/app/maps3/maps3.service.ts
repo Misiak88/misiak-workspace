@@ -6,9 +6,10 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { MapsApiResponse } from '@misiak-workspace/maps3-nb-data-types';
+import { countAvailableBikes } from '@misiak-workspace/maps3-nb-data-types';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import {StationDto,StationSummaryDto} from '@misiak-workspace/api-nb-data-sync-dto';
+import { StationSummaryDto } from '@misiak-workspace/api-nb-data-sync-dto';
 
 @Injectable()
 export class MapsService {
@@ -16,33 +17,21 @@ export class MapsService {
   private readonly queryParams: Record<string, string>;
 
   constructor(private readonly http: HttpService) {
-    const API_BASE_URL = process.env.API_BASE_URL;
-    const LOGINKEY = process.env.LOGINKEY;
-    const CITY = process.env.CITY;
-    const DETAILS = process.env.DETAILS;
-    const BIKES = process.env.BIKES;
-    const FORMAT = process.env.FORMAT;
-
-    if (!API_BASE_URL)
-      throw new InternalServerErrorException('Missing API_BASE_URL in .env');
-    if (!LOGINKEY)
-      throw new InternalServerErrorException('Missing LOGINKEY in .env');
-    if (!CITY)
-      throw new InternalServerErrorException('Missing CITY in .env');
-    if (!DETAILS)
-      throw new InternalServerErrorException('Missing DETAILS in .env');
-    if (!BIKES)
-      throw new InternalServerErrorException('Missing BIKES in .env');
-    if (!FORMAT)
-      throw new InternalServerErrorException('Missing FORMAT in .env');
+    const { API_BASE_URL, LOGINKEY, CITY, DETAILS, BIKES, FORMAT } = process.env;
+    if (!API_BASE_URL) throw new InternalServerErrorException('Missing API_BASE_URL');
+    if (!LOGINKEY)   throw new InternalServerErrorException('Missing LOGINKEY');
+    if (!CITY)       throw new InternalServerErrorException('Missing CITY');
+    if (!DETAILS)    throw new InternalServerErrorException('Missing DETAILS');
+    if (!BIKES)      throw new InternalServerErrorException('Missing BIKES');
+    if (!FORMAT)     throw new InternalServerErrorException('Missing FORMAT');
 
     this.baseUrl = API_BASE_URL;
     this.queryParams = {
       loginkey: LOGINKEY,
-      city: CITY,
-      details: DETAILS,
-      bikes: BIKES,
-      format: FORMAT,
+      city:     CITY,
+      details:  DETAILS,
+      bikes:    BIKES,
+      format:   FORMAT,
     };
   }
 
@@ -57,54 +46,47 @@ export class MapsService {
   async getPlaces(): Promise<StationSummaryDto[]> {
     const root = await this.fetchRaw();
 
+    const summariesRaw = root.countries.flatMap(country =>
+      country.cities.map(city => {
+        // wszystkie miejsca
+        const allBikeLists = city.places.flatMap(p => p.bike_list);
+        const bikesAvailableToRentInSystem = countAvailableBikes(allBikeLists);
 
-    const flat: (StationDto & { domain: string; cityName: string })[] =
-      root.countries.flatMap((country) =>
-        country.cities.flatMap((city) =>
-          city.places.map((place) => ({
-            domain: country.domain,
-            cityName: city.name,
-            uid: place.uid,
-            name: place.name,
-            number: place.number,
-            bikes: place.bikes,
-            bikesAvailableToRent: place.bikes_available_to_rent,
-          })),
-        ),
-      );
+        // tylko stacje (spot === true)
+        const stationPlaces = city.places.filter(p => p.spot);
+        const stationBikeLists = stationPlaces.flatMap(p => p.bike_list);
+        const bikesAvailableToRentInSystemOnlyStations =
+          countAvailableBikes(stationBikeLists);
 
-    const stationDtos = plainToInstance(StationDto, flat);
-    for (const dto of stationDtos) {
+        // DTO stacji
+        const stations = stationPlaces.map(place => ({
+          uid: place.uid,
+          name: place.name,
+          number: place.number,
+          bikes: place.bikes,
+          bikesAvailableToRent: countAvailableBikes(place.bike_list),
+        }));
+
+        return {
+          domain: country.domain,
+          cityName: city.name,
+          bikesAvailableToRentInSystem,
+          bikesAvailableToRentInSystemOnlyStations,
+          stations,
+        };
+      })
+    );
+
+    // Walidacja DTO
+    const summariesDto = plainToInstance(StationSummaryDto, summariesRaw);
+    for (const dto of summariesDto) {
       const errors = await validate(dto);
-      if (errors.length > 0) {
-        const msg = errors
-          .flatMap((e) => Object.values(e.constraints || {}))
-          .join(', ');
+      if (errors.length) {
+        const msg = errors.flatMap(e => Object.values(e.constraints || {})).join(', ');
         throw new BadRequestException(`Validation failed: ${msg}`);
       }
     }
 
-
-    const groupsMap = new Map<string, {
-      domain: string;
-      cityName: string;
-      stations: StationDto[];
-    }>();
-    for (const item of flat) {
-      const key = `${item.domain}::${item.cityName}`;
-      if (!groupsMap.has(key)) {
-        groupsMap.set(key, {
-          domain: item.domain,
-          cityName: item.cityName,
-          stations: [],
-        });
-      }
-      const { domain, cityName, ...stationOnly } = item;
-      groupsMap.get(key)!.stations.push(stationOnly);
-    }
-
-
-    const grouped = Array.from(groupsMap.values());
-    return plainToInstance(StationSummaryDto, grouped);
+    return summariesDto;
   }
 }
