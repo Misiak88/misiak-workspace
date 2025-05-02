@@ -1,0 +1,44 @@
+{
+  "name": "@misiak-workspace/api-proxy-service",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "targets": {
+      "serve": {
+        "executor": "@nx/js:node",
+        "defaultConfiguration": "development",
+        "dependsOn": [
+          "build"
+        ],
+        "options": {
+          "buildTarget": "@misiak-workspace/api-proxy-service:build",
+          "runBuildTargetDependencies": false
+        },
+        "configurations": {
+          "development": {
+            "buildTarget": "@misiak-workspace/api-proxy-service:build:development"
+          },
+          "production": {
+            "buildTarget": "@misiak-workspace/api-proxy-service:build:production"
+          }
+        }
+      },
+      "test": {
+        "options": {
+          "passWithNoTests": true
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "express-mysql-session": "^3.0.3",
+    "express-session": "^1.18.1",
+    "morgan": "^1.10.0",
+    "typeorm": "^0.3.22"
+  },
+  "devDependencies": {
+    "@types/express-session": "^1.18.1",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.15.3"
+  }
+}
