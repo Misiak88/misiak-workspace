@@ -20,6 +20,12 @@
     },
     {
       "path": "./libs/shared/api-nb-data-sync-dto"
+    },
+    {
+      "path": "./apps/api-proxy-service-e2e"
+    },
+    {
+      "path": "./apps/api-proxy-service"
     }
   ]
 }

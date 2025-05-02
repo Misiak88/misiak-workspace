@@ -49,7 +49,11 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/hello-world-e2e/**/*", "apps/api-nb-data-sync-e2e/**/*"]
+      "exclude": [
+        "apps/hello-world-e2e/**/*",
+        "apps/api-nb-data-sync-e2e/**/*",
+        "apps/api-proxy-service-e2e/**/*"
+      ]
     },
     {
       "plugin": "@nx/eslint/plugin",
